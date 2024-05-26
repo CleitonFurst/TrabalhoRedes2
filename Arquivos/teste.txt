@@ -1,0 +1,132 @@
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROC [dbo].[USP_RECEIPT_SELECT_CONSULTA_PEDIDOS_3]
+(
+    @loja_id int,
+    @filtro int,
+    @data_inicial datetime,
+    @data_final datetime,
+    @pagina int,
+    @order_id int,
+    @campanha_id int,
+    @nome_Cliente varchar(100),
+    @status_id varchar(100),
+    @formaPgto_id varchar(100),
+    @email varchar(100),
+    @cpf varchar(15),
+    @cnpj varchar(20),
+    @limitePorPagina int,
+    @televendasID int = null,
+    @todos varchar(100),
+    @afiliado int,
+    @cupom varchar(100),
+    @nomeCurso varchar(500)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @reg_ini int, @reg_fim int, @totalRegistro int;
+    DECLARE @ValorTotal money, @ValorFrete money, @ValorGeral money, @ValorDesconto money;
+
+    -- Configuração de Paginação
+    SET @reg_ini = CASE WHEN @pagina = 0 THEN 1 ELSE ((@pagina - 1) * @limitePorPagina) + 1 END;
+    SET @reg_fim = CASE WHEN @pagina = 0 THEN @limitePorPagina ELSE @pagina * @limitePorPagina END;
+
+    -- Ajuste de @data_final
+    SET @data_final = DATEADD(SECOND, 59, DATEADD(MINUTE, 59, DATEADD(HOUR, 23, @data_final)));
+
+    -- Tabela temporária para resultados
+    DECLARE @ret TABLE
+    (
+        row_num int IDENTITY(1,1),
+        order_id int,
+        date_entered datetime,
+        nome varchar(100),
+        formapgto varchar(50),
+        status_desc varchar(80),
+        total money,
+        frete money,
+        usuario_id int,
+        valor_cupom decimal,
+        descontovalorformapagto money,
+        descontopercentualformapagto varchar(50),
+        desconto_produto money,
+        televendasID int,
+        televendasNome varchar(255),
+        nomecurso varchar(255),
+        qtdparcelas varchar(50),
+        AfiliadoMidiaID varchar(50),
+        afiliado int,
+        NomeModalidade varchar (100),
+        NomeCampanha varchar (max),
+        NomeCupom varchar(100)
+    );
+
+    -- Inserção de dados baseada em @filtro
+    INSERT INTO @ret
+    (
+        order_id, date_entered, nome, formapgto, status_desc, total, frete, usuario_id, 
+        valor_cupom, descontovalorformapagto, descontopercentualformapagto, desconto_produto, 
+        televendasID, televendasNome, nomecurso, qtdparcelas, AfiliadoMidiaID, afiliado, 
+        NomeModalidade, NomeCampanha, NomeCupom
+    )
+    SELECT 
+        f.order_id, f.date_entered, f.nome, f.formapgto, f.status_desc, f.total, 
+        f.frete, f.usuario_id, f.valor_cupom, f.descontovalorformapagto, f.descontopercentualformapagto, 
+        f.desconto_produto, f.televendasID, f.televendasNome, f.nomecurso, f.qtdparcelas, 
+        f.AfiliadoMidiaID, f.afiliado, f.NomeModalidade, f.NomeCampanha, f.NomeCupom
+    FROM DBO.FN_CONSULTA_PEDIDOS_SELECT_2(
+        @data_inicial, @data_final, @order_id, 0, @loja_id, @nome_Cliente, @cpf, @email, @cnpj, 
+        @campanha_id, @afiliado, '', '', '', @nomeCurso
+    ) f
+    WHERE 
+        (@filtro = 1 AND (f.row_num BETWEEN @reg_ini AND @reg_fim))
+        OR (@filtro = 6 AND f.row_num = 1)
+        OR (@filtro = 7 AND f.formapagamentoitem_id IN (SELECT item FROM dbo.fnSplit(@formaPgto_id, ',')) AND f.row_num BETWEEN @reg_ini AND @reg_fim)
+        OR (@filtro = 8 AND f.status_id IN (SELECT item FROM dbo.fnSplit(@status_id, ',')) AND f.row_num BETWEEN @reg_ini AND @reg_fim)
+        OR (@filtro = 10 AND f.televendasID IS NOT NULL AND ISNULL(@televendasID, f.televendasID) = f.televendasID AND f.row_num BETWEEN @reg_ini AND @reg_fim)
+        OR (@filtro = 12 AND f.NomeCampanha LIKE '%' + @nome_Cliente + '%' AND f.row_num BETWEEN @reg_ini AND @reg_fim)
+        OR (@filtro = 13 AND f.NomeModalidade LIKE '%' + @nome_Cliente + '%' AND f.row_num BETWEEN @reg_ini AND @reg_fim)
+        OR (@filtro = 14 AND f.qtdparcelas = @nome_Cliente AND f.row_num BETWEEN @reg_ini AND @reg_fim)
+        OR (@filtro = 15 AND f.descontopercentualformapagto LIKE @nome_Cliente + '%' AND f.row_num BETWEEN @reg_ini AND @reg_fim)
+        OR (@filtro = 16 AND f.NomeCupom LIKE '%' + @cupom + '%' AND f.row_num BETWEEN @reg_ini AND @reg_fim)
+        OR (@filtro = 17 AND f.nomecurso LIKE '%' + @nomeCurso + '%' AND f.row_num BETWEEN @reg_ini AND @reg_fim);
+
+    -- Cálculo de Totais
+    SET @totalRegistro = (SELECT COUNT(*) FROM @ret);
+    SET @ValorTotal = (SELECT SUM(total) FROM @ret);
+    SET @ValorFrete = (SELECT SUM(frete) FROM @ret);
+    SET @ValorDesconto = (SELECT SUM(desconto_produto) + SUM(valor_cupom) + SUM(descontovalorformapagto) FROM @ret);
+    SET @ValorGeral = (SELECT SUM(total) + SUM(frete) - @ValorDesconto FROM @ret);
+
+    -- Retorno do totalRegistro
+    SELECT @totalRegistro AS totalRegistro;
+
+    -- Retorno do ValorTotal
+    SELECT @ValorTotal AS ValorTotal;
+
+    -- Retorno do ValorFrete
+    SELECT @ValorFrete AS ValorFrete;
+
+    -- Retorno do ValorDesconto
+    SELECT @ValorDesconto AS ValorDesconto;
+
+    -- Retorno do ValorGeral
+    SELECT @ValorGeral AS ValorGeral;
+    -- Retorno dos Dados Principais com RowNumber
+    SELECT 
+        order_id, date_entered, nome, formapgto, status_desc, total, frete, usuario_id, 
+        ROW_NUMBER() OVER (ORDER BY row_num) AS RowNumber, valor_cupom, descontovalorformapagto, 
+        descontopercentualformapagto, desconto_produto, televendasID, televendasNome, nomecurso, 
+        qtdparcelas, AfiliadoMidiaID, afiliado, NomeModalidade, NomeCampanha, NomeCupom
+    FROM @ret
+    WHERE row_num BETWEEN @reg_ini AND @reg_fim
+    ORDER BY row_num;
+
+END
+GO
