@@ -67,3 +67,73 @@ body {
 .navbar .login:hover {
     background-color: #FFAA33;
 }
+/* Estilizando o modal */
+.modal {
+    display: none; /* Oculto por padrão */
+    position: fixed; /* Fica no topo da tela */
+    z-index: 1; /* Sobre outros elementos */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Permite rolagem se o conteúdo for grande */
+    background-color: rgba(0, 0, 0, 0.8); /* Fundo preto com opacidade */
+}
+
+/* Estilo do conteúdo do modal */
+.modal-content {
+    background-color: #000000; /* Cor de fundo do conteúdo preto */
+    margin: 10% auto; /* Centralizado verticalmente e com espaço ao redor */
+    padding: 20px; /* Espaçamento interno */
+    border: 1px solid #f57c00; /* Borda laranja */
+    width: 60%; /* Largura do conteúdo */
+    color: #ffffff; /* Cor do texto */
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); /* Sombra */
+    border-radius: 10px; /* Cantos arredondados */
+}
+
+/* Estilo do botão de fechar */
+.close {
+    color: #aaa; /* Cor do botão */
+    float: right; /* Alinha à direita */
+    font-size: 28px; /* Tamanho da fonte */
+    font-weight: bold; /* Negrito */
+}
+
+.close:hover,
+.close:focus {
+    color: #ffffff; /* Cor ao passar o mouse ou focar */
+    text-decoration: none; /* Remove sublinhado */
+    cursor: pointer; /* Cursor de mãozinha */
+}
+
+/* Estilo do título do modal */
+.modal-content h2 {
+    color: #f57c00; /* Cor do título */
+    margin-top: 0; /* Remove a margem superior */
+    text-align: center; /* Centraliza o título */
+}
+
+/* Estilo da lista de arquivos */
+#fileList {
+    list-style-type: none; /* Remove as bolinhas da lista */
+    padding: 0; /* Remove o padding */
+}
+
+#fileList li {
+    margin: 10px 0; /* Espaçamento entre os itens */
+}
+
+#fileList li a {
+    background-color: #f57c00; /* Fundo laranja para cada link */
+    color: #ffffff; /* Cor do texto branco */
+    text-decoration: none; /* Remove sublinhado */
+    font-weight: bold; /* Negrito */
+    padding: 10px; /* Espaçamento interno */
+    display: block; /* Ocupa toda a largura */
+    border-radius: 5px; /* Cantos arredondados */
+}
+
+#fileList li a:hover {
+    background-color: #ff9800; /* Cor laranja mais clara ao passar o mouse */
+}
